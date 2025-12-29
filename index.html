@@ -3,41 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mines Game - Simulator</title>
+    <title>Mines - Predictor Edition</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0f172a; color: white; font-family: sans-serif; }
-        .grid-cell { transition: all 0.2s; }
-        .grid-cell:hover { transform: scale(1.05); }
+        body { background-color: #070b13; color: white; font-family: 'Inter', sans-serif; }
+        .grid-cell { transition: all 0.15s ease-in-out; border: 2px solid #1e293b; }
+        .grid-cell:active { transform: scale(0.9); }
+        .sidebar { border-right: 1px solid #1e293b; background: #0f172a; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState } = React;
 
         function MinesGame() {
             const [grid, setGrid] = useState(Array(25).fill(null));
-            const [mines, setMines] = useState([]);
             const [gameOver, setGameOver] = useState(false);
-            const [score, setScore] = useState(0);
             const [gameStarted, setGameStarted] = useState(false);
-            const [mineCount, setMineCount] = useState(3);
+            const [safeClicksRemaining, setSafeClicksRemaining] = useState(0);
+            const [totalSafeClicks, setTotalSafeClicks] = useState(0);
+            const [clickCount, setClickCount] = useState(0);
 
             const startGame = () => {
-                const newMines = [];
-                while (newMines.length < mineCount) {
-                    const r = Math.floor(Math.random() * 25);
-                    if (!newMines.includes(r)) newMines.push(r);
-                }
-                setMines(newMines);
+                // Generate a random number of safe clicks between 3 and 10
+                const randomWinTarget = Math.floor(Math.random() * 8) + 3;
+                setTotalSafeClicks(randomWinTarget);
+                setSafeClicksRemaining(randomWinTarget);
+                setClickCount(0);
                 setGrid(Array(25).fill(null));
                 setGameOver(false);
-                setScore(0);
                 setGameStarted(true);
             };
 
@@ -45,48 +44,63 @@
                 if (gameOver || grid[i] !== null || !gameStarted) return;
 
                 const newGrid = [...grid];
-                if (mines.includes(i)) {
+                
+                if (clickCount < totalSafeClicks) {
+                    // GUARANTEED WIN ZONE
+                    newGrid[i] = '💎';
+                    setSafeClicksRemaining(prev => prev - 1);
+                    setClickCount(prev => prev + 1);
+                } else {
+                    // THE TRAP - Next click is always a mine
                     newGrid[i] = '💣';
                     setGameOver(true);
-                    // Show all mines
-                    mines.forEach(m => newGrid[m] = '💣');
-                } else {
-                    newGrid[i] = '💎';
-                    setScore(score + 1);
+                    // Fill the rest with mines to show the game ended
+                    for(let j=0; j<25; j++) {
+                        if(newGrid[j] === null) newGrid[j] = '💣';
+                    }
                 }
                 setGrid(newGrid);
             };
 
             return (
-                <div className="flex flex-col items-center justify-center min-h-screen p-4">
-                    <h1 className="text-4xl font-bold mb-6 text-blue-400">MINES</h1>
-                    
-                    <div className="bg-slate-800 p-6 rounded-xl shadow-2xl border border-slate-700">
-                        <div className="mb-4 flex justify-between items-center">
-                            <div>
-                                <label className="block text-xs text-slate-400">MINES</label>
-                                <input 
-                                    type="number" 
-                                    value={mineCount} 
-                                    onChange={(e) => setMineCount(Math.min(24, Math.max(1, e.target.value)))}
-                                    className="bg-slate-900 border border-slate-600 rounded px-2 py-1 w-16"
-                                    disabled={gameStarted && !gameOver}
-                                />
+                <div className="flex h-screen w-full overflow-hidden">
+                    {/* SIDEBAR */}
+                    <div className="sidebar w-64 p-6 flex flex-col justify-between hidden md:flex">
+                        <div>
+                            <h2 className="text-xl font-bold text-blue-500 mb-8 tracking-widest">PREDICTOR</h2>
+                            <div className="bg-slate-900 p-4 rounded-lg border border-blue-900/50">
+                                <p className="text-xs text-slate-400 uppercase mb-1">Guaranteed Wins</p>
+                                <p className="text-4xl font-mono text-blue-400">
+                                    {gameStarted ? totalSafeClicks : "--"}
+                                </p>
                             </div>
-                            <div className="text-right">
-                                <p className="text-xs text-slate-400">GEMS FOUND</p>
-                                <p className="text-2xl font-mono text-green-400">{score}</p>
+                            <div className="mt-4 bg-slate-900 p-4 rounded-lg border border-green-900/50">
+                                <p className="text-xs text-slate-400 uppercase mb-1">Clicks Remaining</p>
+                                <p className="text-4xl font-mono text-green-400">
+                                    {gameStarted ? safeClicksRemaining : "--"}
+                                </p>
                             </div>
                         </div>
+                        <div className="text-xs text-slate-500 italic">
+                            System status: Connected to Node_04
+                        </div>
+                    </div>
 
-                        <div className="grid grid-cols-5 gap-2">
+                    {/* MAIN GAME AREA */}
+                    <div className="flex-1 flex flex-col items-center justify-center bg-[#070b13] relative">
+                        {/* Mobile Header (Since sidebar is hidden on small screens) */}
+                        <div className="md:hidden mb-4 text-center">
+                            <p className="text-blue-400 font-bold">WINS ALLOWED: {totalSafeClicks}</p>
+                        </div>
+
+                        <div className="grid grid-cols-5 gap-3 p-4 bg-slate-800/30 rounded-2xl border border-slate-700/50">
                             {grid.map((cell, i) => (
                                 <div
                                     key={i}
                                     onClick={() => handleClick(i)}
-                                    className={`w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center rounded-lg cursor-pointer text-2xl grid-cell ${
-                                        cell === null ? 'bg-slate-700 hover:bg-slate-600' : 
-                                        cell === '💣' ? 'bg-red-500' : 'bg-green-500'
+                                    className={`w-14 h-14 sm:w-20 sm:h-20 flex items-center justify-center rounded-xl cursor-pointer text-3xl grid-cell shadow-lg ${
+                                        cell === null ? 'bg-slate-800 hover:bg-slate-700' : 
+                                        cell === '💣' ? 'bg-red-600 border-red-400' : 'bg-blue-600 border-blue-400 shadow-blue-500/20'
                                     }`}
                                 >
                                     {cell}
@@ -94,19 +108,24 @@
                             ))}
                         </div>
 
-                        <button 
-                            onClick={startGame}
-                            className="w-full mt-6 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold transition"
-                        >
-                            {gameOver || !gameStarted ? "PLAY" : "RESET"}
-                        </button>
+                        <div className="mt-8 w-full max-w-xs px-4">
+                            <button 
+                                onClick={startGame}
+                                className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black text-lg tracking-widest shadow-xl shadow-blue-600/20 active:scale-95 transition-all"
+                            >
+                                {gameOver || !gameStarted ? "INITIALIZE GAME" : "RESET SYSTEM"}
+                            </button>
+                            {gameOver && (
+                                <p className="text-center mt-4 text-red-400 animate-pulse font-bold">SYSTEM OVERLOAD: MINE HIT</p>
+                            )}
+                        </div>
                     </div>
                 </div>
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<MinesGame />);
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<MinesGame />);
     </script>
 </body>
 </html>
