@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mines Game - Simulator</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .grid-cell { transition: all 0.2s; }
+        .grid-cell:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function MinesGame() {
+            const [grid, setGrid] = useState(Array(25).fill(null));
+            const [mines, setMines] = useState([]);
+            const [gameOver, setGameOver] = useState(false);
+            const [score, setScore] = useState(0);
+            const [gameStarted, setGameStarted] = useState(false);
+            const [mineCount, setMineCount] = useState(3);
+
+            const startGame = () => {
+                const newMines = [];
+                while (newMines.length < mineCount) {
+                    const r = Math.floor(Math.random() * 25);
+                    if (!newMines.includes(r)) newMines.push(r);
+                }
+                setMines(newMines);
+                setGrid(Array(25).fill(null));
+                setGameOver(false);
+                setScore(0);
+                setGameStarted(true);
+            };
+
+            const handleClick = (i) => {
+                if (gameOver || grid[i] !== null || !gameStarted) return;
+
+                const newGrid = [...grid];
+                if (mines.includes(i)) {
+                    newGrid[i] = '💣';
+                    setGameOver(true);
+                    // Show all mines
+                    mines.forEach(m => newGrid[m] = '💣');
+                } else {
+                    newGrid[i] = '💎';
+                    setScore(score + 1);
+                }
+                setGrid(newGrid);
+            };
+
+            return (
+                <div className="flex flex-col items-center justify-center min-h-screen p-4">
+                    <h1 className="text-4xl font-bold mb-6 text-blue-400">MINES</h1>
+                    
+                    <div className="bg-slate-800 p-6 rounded-xl shadow-2xl border border-slate-700">
+                        <div className="mb-4 flex justify-between items-center">
+                            <div>
+                                <label className="block text-xs text-slate-400">MINES</label>
+                                <input 
+                                    type="number" 
+                                    value={mineCount} 
+                                    onChange={(e) => setMineCount(Math.min(24, Math.max(1, e.target.value)))}
+                                    className="bg-slate-900 border border-slate-600 rounded px-2 py-1 w-16"
+                                    disabled={gameStarted && !gameOver}
+                                />
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs text-slate-400">GEMS FOUND</p>
+                                <p className="text-2xl font-mono text-green-400">{score}</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-5 gap-2">
+                            {grid.map((cell, i) => (
+                                <div
+                                    key={i}
+                                    onClick={() => handleClick(i)}
+                                    className={`w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center rounded-lg cursor-pointer text-2xl grid-cell ${
+                                        cell === null ? 'bg-slate-700 hover:bg-slate-600' : 
+                                        cell === '💣' ? 'bg-red-500' : 'bg-green-500'
+                                    }`}
+                                >
+                                    {cell}
+                                </div>
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={startGame}
+                            className="w-full mt-6 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold transition"
+                        >
+                            {gameOver || !gameStarted ? "PLAY" : "RESET"}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MinesGame />);
+    </script>
+</body>
+</html>
